@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Empresa {
+  id           Int       @id @default(autoincrement())
+  nome         String
+  servicos     Servico[] // Relacionamento um-para-muitos
+  filiais      Filial[] // Relacionamento um-para-muitos
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+}
+
+model Filial {
+  id           Int             @id @default(autoincrement())
+  nome         String
+  localizacao  String
+  telefone     String
+  email        String?         
+  servicos     FilialServico[] 
+  fotos        Foto[]          
+  documentos   Documento[]     
+  empresaId    Int
+  empresa      Empresa         @relation(fields: [empresaId], references: [id])
+  contatos     Contato[]      // Relacionamento um-para-muitos
+  tipoFilialId Int
+  tipoFilial   TipoFilial     @relation(fields: [tipoFilialId], references: [id])
+  criadoEm     DateTime       @default(now())
+  atualizadoEm DateTime       @updatedAt
+}
+
+model Servico {
+  id           Int             @id @default(autoincrement())
+  nome         String
+  descricao    String?
+  empresaId    Int
+  empresa      Empresa         @relation(fields: [empresaId], references: [id])
+  filiais      FilialServico[] // Relacionamento muitos-para-muitos
+  criadoEm     DateTime        @default(now())
+  atualizadoEm DateTime        @updatedAt
+}
+
+// Tabela de relacionamento muitos-para-muitos entre Filial e Servico
+model FilialServico {
+  filialId  Int
+  servicoId Int
+  filial    Filial  @relation(fields: [filialId], references: [id])
+  servico   Servico @relation(fields: [servicoId], references: [id])
+
+  @@id([filialId, servicoId])
+}
+
+model Contato {
+  id           Int           @id @default(autoincrement())
+  nome         String
+  telefone     String
+  email        String? // Opcional
+  filialId     Int
+  filial       Filial        @relation(fields: [filialId], references: [id])
+  notificacoes Notificacao[] // Relacionamento um-para-muitos
+  criadoEm     DateTime      @default(now())
+}
+
+model Notificacao {
+  id          Int      @id @default(autoincrement())
+  mensagem    String
+  contatoId   Int
+  contato     Contato  @relation(fields: [contatoId], references: [id])
+  criadoEm    DateTime @default(now())
+  visualizada Boolean  @default(false)
+}
+
+model Foto {
+  id       Int      @id @default(autoincrement())
+  url      String
+  filialId Int
+  filial   Filial   @relation(fields: [filialId], references: [id])
+  criadoEm DateTime @default(now())
+}
+
+model Documento {
+  id       Int      @id @default(autoincrement())
+  nome     String
+  url      String
+  filialId Int
+  filial   Filial   @relation(fields: [filialId], references: [id])
+  criadoEm DateTime @default(now())
+}
+
+model User {
+  id       Int     @id @default(autoincrement())
+  nome     String
+  email    String? @unique
+  senha    String
+  telefone String  @unique
+  isAdmin  Boolean @default(false)
+}
+
+model TipoFilial {
+  id           Int      @id @default(autoincrement())
+  nome         String
+  descricao    String?
+  filiais      Filial[] 
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+}
