@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import MapSection from '../map/mapSection';
 
 // Componente Popup
 const Popup = ({ data, onClose }) => {
@@ -9,7 +10,11 @@ const Popup = ({ data, onClose }) => {
     <div className="popup-overlay" onClick={onClose}>
       <div className="popup-content" onClick={(e) => e.stopPropagation()}>
         <div className="profile-header">
-          <img className="profile-image" src={data.image} alt={data.nome} />
+          <img
+            className="profile-image"
+            src={`http://localhost:3300/uploads/${data.image}`}
+            alt={data.nome}
+          />
           <h4 className="profile-name">{data.nome}</h4>
         </div>
         <div className="profile-details">
@@ -18,12 +23,15 @@ const Popup = ({ data, onClose }) => {
           <p><strong>Telefone:</strong> {data.telefone}</p>
           <p><strong>Tipo:</strong> {data.type}</p>
         </div>
+
+        {/* Renderizando o mapa */}
+        <MapSection location={data.localizacao} />
+
         <button className="close-button" onClick={onClose}>Fechar</button>
       </div>
     </div>
   );
 };
-
 
 const RecentCard = () => {
   const [list, setFiliais] = useState([]);
@@ -64,8 +72,12 @@ const RecentCard = () => {
           const { image, email, localizacao, nome, telefone, type } = val;
           return (
             <div className='box shadow' key={index} onClick={() => openPopup(val)}>
-              <div className='img'>
-                <img src={image} alt='' />
+              <div className='img h-40'>
+                <img 
+                  src={`http://localhost:3300/uploads/${image}`} 
+                  alt={nome}
+                  style={{height:300}}
+                />
               </div>
               <div className='text'>
                 <div className='category flex'>

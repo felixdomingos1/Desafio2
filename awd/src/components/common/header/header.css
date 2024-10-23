@@ -15,9 +15,6 @@ header a {
   transition: 0.5s;
   font-weight: 500;
 }
-header a:hover {
-  color: #e7881b;
-}
 .btn1{
   background: #e7881b;
 }

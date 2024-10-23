@@ -4,24 +4,43 @@ import multer from 'multer';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+import { register } from 'node:module';
+import { pathToFileURL } from 'node:url';
+
+register('ts-node/esm', pathToFileURL('./'));
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 
 const app = express();
 const prisma = new PrismaClient();
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }))
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-const upload = multer({ dest: 'uploads/' });
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');  
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname)); 
+  }
+});
 
-const generateToken = (userId:number) => {
-  return jwt.sign({ userId }, 'secreta-chave', { expiresIn: '1h' });
-};
+export const upload = multer({ storage: storage });
+
 
 const createInitialAdmin = async () => {
   const existingAdmin = await prisma.user.findFirst({ where: { isAdmin: true } });
   let nome = "Luz Kabir"
   if (!existingAdmin) {
     const hashedPassword = await bcrypt.hash('admin123', 10); 
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         nome: 'Felix Domingos',
         email: 'admin@empresa.com',
@@ -30,9 +49,14 @@ const createInitialAdmin = async () => {
         isAdmin: true,
       },
     });
+    
     await prisma.empresa.create({
-      data: { nome },
+      data: { 
+        nome,
+        userId: Number(user.id)
+      },
     });
+    
     console.log('Admin  e Empresa criados com sucesso');
   }
 };
@@ -84,7 +108,6 @@ app.put('/admin/update', async (req, res) => {
     res.status(500).json({ error: 'Erro ao atualizar admin' });
   }
 });
-
 
 app.get('/admin/:id', async (req: Request<{ id: string }>, res: Response): Promise<any> => {
   try {
@@ -153,10 +176,11 @@ app.get('/filiais', async (req, res) => {
   }
 });
 
-app.post('/filial', async (req, res) => {
+
+app.post('/filial', upload.single('foto'), async (req, res) => {
   try {
     const { nome, localizacao, telefone, email, empresaId, tipoFilialId } = req.body;
-    console.log(nome, localizacao, telefone, email, empresaId, tipoFilialId );
+    const imagePath = req.file ? req.file.filename : '';
     
     const filial = await prisma.filial.create({
       data: {
@@ -164,6 +188,7 @@ app.post('/filial', async (req, res) => {
         localizacao,
         telefone,
         email,
+        image:imagePath,
         empresa: { connect: { id: Number(empresaId) } },
         tipoFilial: { connect: { id: Number(tipoFilialId) } },
       },
@@ -175,10 +200,12 @@ app.post('/filial', async (req, res) => {
 });
 
 
-app.put('/filial/:id', async (req, res) => {
+app.put('/filial/:id',  upload.single('foto'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { nome, localizacao, telefone, email, empresaId } = req.body;
+    const { nome, localizacao, telefone, email, empresaId, tipoFilialId } = req.body;
+    const imagePath = req.file ? req.file.filename : '';
+
     const filial = await prisma.filial.update({
       where: { id: Number(id) },
       data: {
@@ -186,7 +213,9 @@ app.put('/filial/:id', async (req, res) => {
         localizacao,
         telefone,
         email,
-        empresa: { connect: { id: empresaId } },
+        image:imagePath,
+        empresa: { connect: { id: Number(empresaId) } },
+        tipoFilial: { connect: { id: Number(tipoFilialId) } },
       },
     });
     res.status(201).json(filial);
@@ -205,174 +234,8 @@ app.delete('/filial/:id', async (req, res) => {
     res.status(400).json({ error: 'Erro ao Deletar filial' });
   }
 });
-
-app.get('/servicos', async (req, res) => {
-  try {
-  const servicos = await prisma.servico.findMany();
-  res.status(201).json(servicos);
-  } catch (error) {
-    res.status(400).json({ error: 'Erro ao Pegar Serviço' });
-  }
-});
-
-app.post('/servico', async (req, res) => {
-  try {
-  const { nome, descricao, empresaId } = req.body;
-  const servico = await prisma.servico.create({
-    data: { nome, descricao, empresaId },
-  });
-  res.status(201).json(servico);
-  } catch (error) {
-    res.status(400).json({ error: 'Erro ao Postar Serviço' });
-  }
-});
-
-app.put('/servico/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { nome, descricao, empresaId } = req.body;
-    const servico = await prisma.servico.update({
-      where: { id: Number(id) },
-      data: { nome, descricao, empresaId },
-    });
-    res.status(201).json(servico);
-  } catch (error) {
-    res.status(400).json({ error: 'Erro ao Atualizar Serviço' });
-  }
-});
-
-app.delete('/servico/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await prisma.servico.delete({ where: { id: Number(id) } });
-    res.status(201).json({ message: 'Serviço deletado com sucesso' });
-  } catch (error) {
-    res.status(400).json({ error: 'Erro ao Deletar Serviço' });
-  }
-});
-
-app.get('/contatos', async (req, res) => {
-  try {
-  const contatos = await prisma.contato.findMany();
-  res.status(201).json(contatos);
-  } catch (error) {
-    res.status(400).json({ error: 'Erro ao Pegar Contacto' });
-  }
-});
-
-app.post('/contato', async (req, res) => {
-  try {
-    const { nome, telefone, email, filialId } = req.body;
-    const contato = await prisma.contato.create({
-      data: { nome, telefone, email, filialId },
-    });
-    res.status(201).json(contato);
-  } catch (error) {
-    res.status(400).json({ error: 'Erro ao Postar Contacto' });
-  }
-});
-
-app.put('/contato/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { nome, telefone, email, filialId } = req.body;
-    const contato = await prisma.contato.update({
-      where: { id: Number(id) },
-      data: { nome, telefone, email, filialId },
-    });
-    res.status(201).json(contato);
-  } catch (error) {
-    res.status(400).json({ error: 'Erro ao Atualizar Contacto' });
-  }
-});
-
-app.delete('/contato/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await prisma.contato.delete({ where: { id: Number(id) } });
-    res.json({ message: 'Contato deletado com sucesso' });
-  } catch (error) {
-    res.status(400).json({ error: 'Erro ao Deletar Contacto' });
-  }
-});
-
-app.get('/notificacoes', async (req, res) => {
-  try {
-    const notificacoes = await prisma.notificacao.findMany();
-    res.status(201).json(notificacoes);
-  } catch (error) {
-    res.status(400).json({ error: 'Erro ao pegar as Notificações' });
-  }
-});
-
-app.post('/notificacao', async (req, res) => {
-  try {
-    const { mensagem, contatoId } = req.body;
-    const notificacao = await prisma.notificacao.create({
-      data: { mensagem, contatoId },
-    });
-    res.status(201).json(notificacao);
-  } catch (error) {
-    res.status(400).json({ error: 'Erro ao Notificar' });
-  }
-});
-
-app.put('/notificacao/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { mensagem, contatoId } = req.body;
-  
-    const notificacao = await prisma.notificacao.update({
-      where: { id: Number(id) },
-      data: { mensagem, contatoId },
-    });
-    res.status(200).json(notificacao);
-  } catch (error) {
-    res.status(400).json({ error: 'Erro ao atualizar Notificacao' });
-  } 
-});
-
-app.delete('/notificacao/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await prisma.notificacao.delete({ where: { id: Number(id) } });
-    res.status(200).json({ message: 'Notificação deletada com sucesso' });
-  } catch (error) {
-    res.status(400).json({ error: 'Erro ao deletar notificação' });
-  }
-});
-
-app.post('/filial/:id', upload.single('foto'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const foto = await prisma.foto.create({
-      data: {
-        url: req.file?.path || '',
-        filialId: Number(id),
-      },
-    });
-    res.status(201).json(foto);
-  } catch (error) {
-    res.status(400).json({ error: 'Erro ao Postar Foto' });
-  }
-});
-
-app.post('/filial/:id/documento', upload.single('documento'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const documento = await prisma.documento.create({
-      data: {
-        nome: req.file?.originalname || '',
-        url: req.file?.path || '',
-        filialId: Number(id),
-      },
-    });
-    res.status(201).json(documento);
-  } catch (error) {
-    res.status(400).json({ error: 'Erro ao Postar Documento' });
-  }
-});
  
+
 app.post('/tipos', async (req, res) => {
   try {
     const { nome, descricao } = req.body;

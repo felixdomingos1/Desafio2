@@ -23,6 +23,7 @@ const Filias = () => {
     try {
       await axios.delete(`${SERVER_URL}/filial/${id}`);
       fetchFiliais();
+      toast.success(`Filial eliminada com sucesso!`); 
     } catch (error) {
       console.error('Erro ao deletar filial:', error);
     }

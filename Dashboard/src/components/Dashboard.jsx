@@ -28,10 +28,6 @@ const Dashboard = () => {
       console.error('Erro ao buscar tipos de filiais:', error);
     }
   };
-
-  
-
-  console.log(tipos.length);
   
   useEffect(() => {
     fetchTipos();

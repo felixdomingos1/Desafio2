@@ -63,3 +63,20 @@ form h4 {
     width: 100%;
   }
 }
+
+.results {
+  position: absolute;
+  top: 100%; /* ajuste a posição conforme necessário */
+  right: 0;
+  width: 320px; /* ou ajuste conforme necessário */
+  background-color: white; /* ou qualquer cor de fundo desejada */
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000; /* para garantir que o popup esteja acima de outros elementos */
+  padding: 16px; /* ou conforme desejado */
+  display: none; /* ocultar inicialmente */
+}
+
+.results.active {
+  display: block; /* mostrar o popup quando ativo */
+}

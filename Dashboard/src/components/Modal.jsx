@@ -10,9 +10,9 @@ const Modal = ({ filial, onClose, onRefresh }) => {
   const [email, setEmail] = useState(filial ? filial.email : '');
   const [empresaId, setEmpresaId] = useState(0); 
   const [tipoId, setTipoId] = useState(0); 
-  const [foto, setFoto] = useState(null);
-  const [tipos, setTipos] = useState([]); // Novo estado para armazenar os tipos de filiais
-
+  const [image, setImage] = useState(null);
+  const [tipos, setTipos] = useState([]); 
+  
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -28,52 +28,58 @@ const Modal = ({ filial, onClose, onRefresh }) => {
     };
 
     const getDataFilias = async () => {
-      const response = await axios.get(`${SERVER_URL}/tipos`); // Ajuste para o endpoint correto
+      const response = await axios.get(`${SERVER_URL}/tipos`);  
       console.log(response.data);
-      setTipos(response.data); // Armazena a lista de tipos de filiais
+      setTipos(response.data);  
     };
 
     getData();
     getDataFilias();
-  }, []); // Adicionei o array de dependências
+  }, []);  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    let methodologi = filial ? 'PUT' : 'POST';
-    let url;
-
-    if (methodologi === 'PUT') {
-      url = `${SERVER_URL}/filial/${filial.id}`;
-    } else {
-      url = `${SERVER_URL}/filial`;
+    
+    const formData = new FormData();  
+    formData.append('nome', nome);
+    formData.append('localizacao', localizacao);
+    formData.append('telefone', telefone);
+    formData.append('email', email);
+    formData.append('empresaId', empresaId);
+    formData.append('tipoFilialId', tipoId);
+  
+    if (image) { 
+      formData.append('foto', image);   
     }
 
+    if (!image) { 
+      toast.error('Adicione Uma imagem e Tente novamente.');  
+      throw new Error("Imagem Required")
+    }
+
+    let methodologi = filial ? 'PUT' : 'POST';
+    let url = filial ? `${SERVER_URL}/filial/${filial.id}` : `${SERVER_URL}/filial`;
+  
     try {
-      const response = await fetch(`${url}`, {
+      const response = await axios({
         method: methodologi,
+        url,
+        data:formData,
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'multipart/form-data',
         },
-        body: JSON.stringify({
-          nome,
-          localizacao,
-          telefone,
-          email,
-          empresaId,
-          tipoFilialId:tipoId,
-        }),
       });
-      if (!response.ok) throw new Error('Erro ao salvar filial');
-      
-      toast.success(`Filial ${filial ? 'atualizada' : 'criada'} com sucesso!`); // Notificação de sucesso
-      await onRefresh(); // Atualiza a lista de filiais
-      onClose(); // Fecha o modal
+
+      if (!response) throw new Error('Erro ao salvar Tipo');
+      toast.success(`Filial ${filial ? 'atualizada' : 'criada'} com sucesso!`); 
+      await onRefresh();  
+      onClose();  
     } catch (error) {
       console.error('Erro ao salvar filial:', error);
-      toast.error('Erro ao salvar filial. Tente novamente.'); // Notificação de erro
+      toast.error('Erro ao salvar filial. Tente novamente.');  
     }
   };
-
+  
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50">
       <div className="fixed inset-0 bg-black opacity-50"></div>
@@ -84,7 +90,7 @@ const Modal = ({ filial, onClose, onRefresh }) => {
         </h2>
 
         <form onSubmit={handleSubmit}>
-          <div className="mb-4">
+          <div className="mb-2">
             <label className="block mb-2">Nome da Filial</label>
             <input
               type="text"
@@ -95,7 +101,7 @@ const Modal = ({ filial, onClose, onRefresh }) => {
             />
           </div>
 
-          <div className="mb-4">
+          <div className="mb-2">
             <label className="block mb-2">Localização</label>
             <input
               type="text"
@@ -106,7 +112,7 @@ const Modal = ({ filial, onClose, onRefresh }) => {
             />
           </div>
 
-          <div className="mb-4">
+          <div className="mb-2">
             <label className="block mb-2">Telefone</label>
             <input
               type="text"
@@ -117,7 +123,7 @@ const Modal = ({ filial, onClose, onRefresh }) => {
             />
           </div>
 
-          <div className="mb-4">
+          <div className="mb-2">
             <label className="block mb-2">Email</label>
             <input
               type="email"
@@ -129,25 +135,39 @@ const Modal = ({ filial, onClose, onRefresh }) => {
           </div>
 
           {/* Campo de seleção para o tipo de filial */}
-          <div className="mb-4">
-            <label className="block mb-2">Tipo de Filial</label>
-            <select
-              value={tipoId}
-              onChange={(e) => setTipoId(e.target.value)}
-              className="w-full p-2 border dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white"
-              required
-            >
-              <option value="" disabled>
-                Selecione um tipo
-              </option>
-              {tipos.map((tipo) => (
-                <option key={tipo.id} value={tipo.id}>
-                  {tipo.nome}
+          <div className="mb-2">
+              <label className="block mb-2">Tipo de Filial</label>
+              <select
+                value={tipoId}
+                onChange={(e) => setTipoId(e.target.value)}
+                className="w-full p-2 border dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white"
+                required
+              >
+                <option value="">
+                  Selecione um tipo
                 </option>
-              ))}
-            </select>
-          </div>
+                {tipos.length > 0 ? (
+                  tipos.map((tipo) => (
+                    <option key={tipo.id} value={tipo.id}>
+                      {tipo.nome}
+                    </option>
+                  ))
+                ) : (
+                  <option value="" disabled>
+                    Nenhum tipo disponível
+                  </option>
+                )}
+              </select>
+            </div>
 
+          <div className="mb-2">
+            <label className="block mb-2">Imagem da Filial</label>
+            <input
+              type="file"
+              onChange={(e) => setImage(e.target.files[0])}
+              className="w-full p-2 border dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white"
+            />
+          </div>
           <div className="flex justify-end">
             <button
               type="button"
